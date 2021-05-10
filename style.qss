@@ -1,31 +1,31 @@
 /* Internal */
 @window_title = Complex Number Calculator;
-@window_width = 1080;					/* Width of the main window */
-@window_height = 720;					/* Height of the main window */
+@window_width = 1080;                    /* Width of the main window */
+@window_height = 720;                    /* Height of the main window */
 
-@sidebar_width = 300;					/* Width of the sidebar */
-@sidebar_itemHeight = 50;				/* Height of a single item */
-@sidebar_itemPlaceholder = Add new;		/* Item placeholder text */
-@sidebar_circleRadius = 10;				/* Radius of the toggle button circle */
-@sidebar_colorStep = 20;				/* Angle change of circle color */
-@sidebar_colorOffset = 8;				/* Offset to translate color by each step */
+@sidebar_width = 300;                    /* Width of the sidebar */
+@sidebar_itemHeight = 50;                /* Height of a single item */
+@sidebar_itemPlaceholder = Add new;      /* Item placeholder text */
+@sidebar_circleRadius = 10;              /* Radius of the toggle button circle */
+@sidebar_colorStep = 20;                 /* Angle change of circle color */
+@sidebar_colorOffset = 8;                /* Offset to translate color by each step */
 
-@canvas_pixelRatio = 50;				/* 1 unit in pixels */
-@canvas_scaleRate = 20;					/* Speed of zooming */
-@canvas_scaleMax = 13;					/* Maximal scale */
-@canvas_scaleMin = 0.02;				/* Minimal scale */
-@canvas_pointRadius = 6;				/* Radius of number */
-@canvas_originRadius = 3;				/* Radius of origin point */
-@canvas_helperAxis = 5;					/* Number of helper axis in the grid */
+@canvas_pixelRatio = 50;                 /* 1 unit in pixels */
+@canvas_scaleRate = 20;                  /* Speed of zooming */
+@canvas_scaleMax = 13;                   /* Maximal scale */
+@canvas_scaleMin = 0.02;                 /* Minimal scale */
+@canvas_pointRadius = 6;                 /* Radius of number */
+@canvas_originRadius = 3;                /* Radius of origin point */
+@canvas_helperAxis = 5;                  /* Number of helper axis in the grid */
 @canvas_backgroundColor = rgb(255, 255, 255);
 @canvas_gridColor = rgb(200, 200, 200);
 @canvas_axisColor = rgb(44, 44, 44);
 @canvas_helperColor = rgb(240, 240, 240);
 @canvas_textColor = rgb(80, 80, 80);
-@canvas_axisFontSize = 8;				/* Font size of axis numbers */
-@canvas_axisFontFamily = Arial;			/* Font family of axis numbers */
-@canvas_numberFontSize = 12;			/* Font size of complex number labels */
-@canvas_numberFontFamily = Arial;		/* Font family of complex number labels */
+@canvas_axisFontSize = 8;                /* Font size of axis numbers */
+@canvas_axisFontFamily = Arial;          /* Font family of axis numbers */
+@canvas_numberFontSize = 12;             /* Font size of complex number labels */
+@canvas_numberFontFamily = Arial;        /* Font family of complex number labels */
 
 /* CSS */
 @sidebar_backgroundColor = rgb(255, 255, 255);
@@ -37,24 +37,24 @@
 
 /* Rules */
 Sidebar {
-	background-color: @sidebar_backgroundColor;
+    background-color: @sidebar_backgroundColor;
 }
 
 Item {
-	border-bottom: 1px solid @sidebar_borderColor;
+    border-bottom: 1px solid @sidebar_borderColor;
 }
 
 Icon {
-	border-right: 1px solid @sidebar_borderColor;
+    border-right: 1px solid @sidebar_borderColor;
 }
 
 Input {
-	margin: 0 10px;
-	border: none;
-	font-size: 16px;
-	font-family: @sidebar_fontFamily;
-	color: @sidebar_color;
-	background-color: transparent;
+    margin: 0 10px;
+    border: none;
+    font-size: 16px;
+    font-family: @sidebar_fontFamily;
+    color: @sidebar_color;
+    background-color: transparent;
 }
 
 /* TODO: Move variables from code to this stylesheet */
