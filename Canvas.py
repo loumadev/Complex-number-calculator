@@ -214,7 +214,7 @@ class Canvas(QPixmap):
             painter.drawLine(0, y, self.width(), y)
             isHelper and painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
 
-            # Draw number for axis (and prevent from drawing the "0" two time)
+            # Draw number for axis (and prevent from drawing the "0" two times)
             if(not isHelper and numberStr != "0"):
                 rect = self.axisMetrics.boundingRect(numberStr)
                 w = rect.width()
