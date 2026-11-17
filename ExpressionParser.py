@@ -49,6 +49,7 @@ class TokenType(Enum):
     LPAR = auto()
     RPAR = auto()
     COMMA = auto()
+    PIPE = auto()
     END = auto()
 
 
@@ -84,7 +85,8 @@ _SINGLE_CHARS: Dict[str, TokenType] = {
     "^": TokenType.CARET,
     "(": TokenType.LPAR,
     ")": TokenType.RPAR,
-    ",": TokenType.COMMA
+    ",": TokenType.COMMA,
+    "|": TokenType.PIPE
 }
 
 
@@ -276,6 +278,15 @@ class Parser:
                 left = BinaryExpressionASTNode(ASTOperator.DIV, left, self.parseUnary(), token)
             elif(token.type in (TokenType.LPAR, TokenType.IDENT, TokenType.NUMBER)):
                 left = BinaryExpressionASTNode(ASTOperator.MULT, left, self.parseUnary(), token)
+            elif(token.type is TokenType.PIPE):
+                state = self.t.save()
+
+                try:
+                    right = self.parseUnary()
+                    left = BinaryExpressionASTNode(ASTOperator.MULT, left, right, token)
+                except ParseError:
+                    self.t.restore(state)
+                    return left
             else:
                 return left
 
@@ -323,6 +334,9 @@ class Parser:
         if(token.type is TokenType.LPAR):
             return self.parseParen()
 
+        if(token.type is TokenType.PIPE):
+            return self.parseAbs(token)
+
         raise ParseError(f"Expected an expression, got {token.describe()}", token.position, self.t.source)
 
     def parseCall(self, ident: Token) -> CallExpressionASTNode:
@@ -348,6 +362,17 @@ class Parser:
                 raise ParseError(f"Expected ',' or ')', got {token.describe()}", token.position, self.t.source)
 
         return CallExpressionASTNode(ident.text, arguments, ident)
+
+    def parseAbs(self, lpipe: Token) -> CallExpressionASTNode:
+        self.t.nextToken()
+        node = self.parseExpression()
+        token = self.t.peekToken(0)
+
+        if(token.type is not TokenType.PIPE):
+            raise ParseError(f"Expected '|', got {token.describe()}", token.position, self.t.source)
+
+        self.t.nextToken()
+        return CallExpressionASTNode("abs", [node], lpipe)
 
     def parseParen(self) -> ExpressionASTNode:
         self.t.nextToken()
@@ -503,7 +528,13 @@ def _buildFunctionRegistry() -> Dict[str, ComplexFunction]:
         "cosh": ComplexFunction("cosh", 1, lambda args, k: args[0].cosh()),
         "tanh": ComplexFunction("tanh", 1, lambda args, k: args[0].tanh()),
         "abs": ComplexFunction("abs", 1, lambda args, k: args[0].abs()),
+        "mag": ComplexFunction("mag", 1, lambda args, k: args[0].abs()),
+        "mod": ComplexFunction("mod", 1, lambda args, k: args[0].abs()),
+        "norm": ComplexFunction("norm", 1, lambda args, k: args[0].abs()),
+        "len": ComplexFunction("len", 1, lambda args, k: args[0].abs()),
+        "size": ComplexFunction("size", 1, lambda args, k: args[0].abs()),
         "arg": ComplexFunction("arg", 1, lambda args, k: args[0].arg()),
+        "phase": ComplexFunction("phase", 1, lambda args, k: args[0].arg()),
         "conj": ComplexFunction("conj", 1, lambda args, k: args[0].conj()),
         "re": ComplexFunction("re", 1, lambda args, k: args[0].real()),
         "im": ComplexFunction("im", 1, lambda args, k: args[0].imag()),
@@ -574,7 +605,14 @@ class Interpreter:
         self.functions: Dict[str, ComplexFunction] = functions if(functions is not None) else FUNCTIONS
 
     def interpret(self, node: ASTNode) -> List[ComplexNumber]:
-        return self._eval(node)
+        values = self._eval(node)
+        unique: List[ComplexNumber] = []
+
+        for value in values:
+            if(not any(_valuesClose(value, u) for u in unique)):
+                unique.append(value)
+
+        return unique
 
     def _safe(self, fn: Callable[[], ComplexNumber], node: ASTNode) -> ComplexNumber:
         try:

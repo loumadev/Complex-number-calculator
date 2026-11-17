@@ -135,7 +135,7 @@ class ComplexNumber:
         return ComplexNumber([self.r, 0.0], self.sign)
 
     def imag(self) -> "ComplexNumber":
-        return ComplexNumber([0.0, self.i], self.sign)
+        return ComplexNumber([self.i, 0.0], self.sign)
 
     def __str__(self, form: str = "r", precision: Optional[int] = None) -> str:
         r: float = self.r
