@@ -27,18 +27,22 @@ class Sidebar(QWidget):
         self.layout: QVBoxLayout = QVBoxLayout(self)
         self.scrollArea: QScrollArea = QScrollArea(self.parent)
 
-        # Right-side reservation: a 1px separator line plus the vertical
-        # scrollbar, so the items are never covered by the scrollbar
+        # Right-side reservation: the 1px separator line always, plus the
+        # vertical scrollbar's space only while it is actually visible
         self.separatorWidth: int = 1
         self.scrollbarWidth: int = self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        self.reservedWidth: int = self.scrollbarWidth + self.separatorWidth
+        self.reservedWidth: int = self.separatorWidth
 
         # Setup scrollarea
         self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.scrollArea.setFixedSize(self.parent.sidebarWidth, self.parent.height())
+        # A QScrollArea stylesheet border is drawn on both the frame and the
+        # viewport, producing a doubled edge, so the viewport's border is
+        # explicitly removed to leave a single 1px line on the frame
         self.scrollArea.setStyleSheet(
-            f"border: none; border-right: {self.separatorWidth}px solid {self.parent.css.var('sidebar_borderColor')};"
+            f"QScrollArea {{ border: none; border-right: {self.separatorWidth}px solid {self.parent.css.var('sidebar_borderColor')}; }} "
+            f"QScrollArea > QWidget {{ border: none; }}"
         )
         self.scrollArea.setWidget(self)
 
@@ -84,11 +88,35 @@ class Sidebar(QWidget):
         total = sum(item.rowHeight for item in self.items)
         desired = max(self.parent.height(), total)
 
+        # The scrollbar occupies the gutter only while the content actually
+        # overflows, so the items can be sized to the real viewport width
+        scrollbarVisible = total > self.parent.height()
+        self._applyReservation(scrollbarVisible)
+
         # Pin both bounds so the sidebar actually shrinks back when the
         # content gets smaller (minimum alone leaves the old height in place)
         self.setMinimumHeight(desired)
         self.setMaximumHeight(desired)
+
+        # Qt shows the scrollbar as soon as the widget height *meets* the
+        # viewport (not only when it exceeds it), so toggle it by hand to keep
+        # the viewport width in sync with the reserved gutter
+        self.scrollArea.setVerticalScrollBarPolicy(
+            Qt.ScrollBarAlwaysOn if(scrollbarVisible) else Qt.ScrollBarAlwaysOff
+        )
         self.scrollArea.verticalScrollBar().setValue(total)
+
+    def _applyReservation(self, scrollbarVisible: bool) -> None:
+        reserved = self.separatorWidth + (self.scrollbarWidth if(scrollbarVisible) else 0)
+
+        if(reserved == self.reservedWidth):
+            return
+
+        self.reservedWidth = reserved
+        self.layout.setContentsMargins(0, 0, reserved, 0)
+
+        for item in self.items:
+            item.setFixedSize(self.parent.sidebarWidth - reserved, item.rowHeight)
 
     def showTypeMenu(self, item: "Item", pos) -> None:
         c = self.parent.css
