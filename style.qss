@@ -11,6 +11,17 @@
 @sidebar_colorOffset = 8;                /* Offset to translate color by each step */
 @sidebar_errorColor = rgb(178, 34, 34);  /* Color of the input text when there is an error */
 
+@sidebar_sliderItemHeight = 84;          /* Height of a slider item (2 rows) */
+@sidebar_playButtonSize = 20;            /* Size of the play/pause button */
+@slider_defaultMin = 0;                  /* Default slider lower bound */
+@slider_defaultMax = 10;                 /* Default slider upper bound */
+@slider_defaultStep = 0.1;               /* Default slider step */
+@sidebar_animInterval = 33;              /* Milliseconds between animation ticks (one step per tick) */
+@slider_trackColor = rgb(214, 214, 214); /* Color of the slider track */
+@slider_trackWidth = 4;                  /* Width of the slider track */
+@slider_handleRadius = 7;                /* Radius of the slider handle */
+@slider_handleColor = rgb(255, 255, 255);/* Fill color of the slider handle */
+
 @maxValues = 8;                          /* Maximal number of values a single expression can yield */
 
 @canvas_pixelRatio = 50;                 /* 1 unit in pixels */
