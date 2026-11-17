@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 from typing import List, Optional
 import Sidebar
 from Canvas import Canvas
@@ -38,27 +38,10 @@ class Calculator(QMainWindow):
         # Setup sidebar
         self.sidebar: Sidebar.Sidebar = Sidebar.Sidebar(self)
 
-        # Setup error bar
-        self._errorBarHeight: int = self.css.var("sidebar_errorBarHeight", int)
-        self._errorLabel: QLabel = QLabel(self)
-        self._errorLabel.setObjectName("errorLabel")
-        self._errorLabel.setFixedHeight(self._errorBarHeight)
-
-        # Setup sidebar column (scrollarea + error bar)
-        self._sidebarColumn: QWidget = QWidget(self)
-        self._sidebarColumnLayout: QVBoxLayout = QVBoxLayout(self._sidebarColumn)
-        self._sidebarColumnLayout.setContentsMargins(0, 0, 0, 0)
-        self._sidebarColumnLayout.setSpacing(0)
-        self._sidebarColumnLayout.addWidget(self.sidebar.scrollArea)
-        self._sidebarColumnLayout.addWidget(self._errorLabel)
-
         # Setup canvas
         self.canvas: Canvas = Canvas(self)
 
-        self.layout.addWidget(self._sidebarColumn)
+        self.layout.addWidget(self.sidebar.scrollArea)
         self.layout.addWidget(self.canvas.label)
 
-        self._sidebarColumn.setStyleSheet(self.css.content)
-
-    def setErrorMessage(self, message: str) -> None:
-        self._errorLabel.setText(message)
+        self.sidebar.setStyleSheet(self.css.content)

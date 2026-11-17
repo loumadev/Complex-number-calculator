@@ -9,10 +9,7 @@
 @sidebar_circleRadius = 10;              /* Radius of the toggle button circle */
 @sidebar_colorStep = 20;                 /* Angle change of circle color */
 @sidebar_colorOffset = 8;                /* Offset to translate color by each step */
-@sidebar_errorBarHeight = 26;            /* Height of the error message bar */
 @sidebar_errorColor = rgb(178, 34, 34);  /* Color of the input text when there is an error */
-@sidebar_errorBarColor = rgb(150, 30, 30);
-@sidebar_errorBarBackground = rgb(250, 240, 240);
 
 @maxValues = 8;                          /* Maximal number of values a single expression can yield */
 
@@ -63,15 +60,6 @@ Input {
     font-family: @sidebar_fontFamily;
     color: @sidebar_color;
     background-color: transparent;
-}
-
-QLabel#errorLabel {
-    border-top: 1px solid @sidebar_borderColor;
-    color: @sidebar_errorBarColor;
-    background-color: @sidebar_errorBarBackground;
-    font-family: @sidebar_fontFamily;
-    font-size: 11px;
-    padding: 2px 8px;
 }
 
 /* TODO: Move variables from code to this stylesheet */

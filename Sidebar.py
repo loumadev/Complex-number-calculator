@@ -23,20 +23,19 @@ class Sidebar(QWidget):
         self.colorStep: int = self.parent.css.var("sidebar_colorStep", int)
         self.colorOffset: int = self.parent.css.var("sidebar_colorOffset", int)
         self.maxValues: int = self.parent.css.var("maxValues", int)
-        self.errorBarHeight: int = self.parent.css.var("sidebar_errorBarHeight", int)
         self.layout: QVBoxLayout = QVBoxLayout(self)
         self.scrollArea: QScrollArea = QScrollArea(self.parent)
 
         # Setup scrollarea
         self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scrollArea.setFixedSize(self.parent.sidebarWidth, self.parent.height() - self.errorBarHeight)
+        self.scrollArea.setFixedSize(self.parent.sidebarWidth, self.parent.height())
         self.scrollArea.setStyleSheet("border: none;")
         self.scrollArea.setWidget(self)
 
         # Setup sidebar itself
         self.setFixedWidth(self.parent.sidebarWidth)
-        self.setMinimumHeight(self.parent.height() - self.errorBarHeight - 2)  # 2 to fix scroll height
+        self.setMinimumHeight(self.parent.height() - 2)  # 2 to fix scroll height
         self.layout.setAlignment(Qt.AlignTop)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
@@ -142,7 +141,6 @@ class Sidebar(QWidget):
             item.refreshIcon()
             item.refreshErrorDisplay()
 
-        self.reportError()
         self.updateCanvas()
 
     def _findCycleFrom(self, start: "Item", dependencies: Dict["Item", Set["Item"]], unresolvedSet: Set["Item"]) -> Optional[List["Item"]]:
@@ -176,23 +174,6 @@ class Sidebar(QWidget):
                 state[item] = 2
 
         return None
-
-    def reportError(self) -> None:
-        primary: Optional["Item"] = None
-
-        if(self.activeItem is not None and self.activeItem.error):
-            primary = self.activeItem
-        else:
-            for item in self.items:
-                if(item.error):
-                    primary = item
-                    break
-
-        if(primary is not None):
-            prefix = f"[{primary.name}] " if(primary.name) else ""
-            self.parent.setErrorMessage(prefix + primary.error)
-        else:
-            self.parent.setErrorMessage("")
 
     def paintEvent(self, event: QPaintEvent) -> None:
         o = QStyleOption()
@@ -433,7 +414,7 @@ class Circle(QWidget):
         self.toggleVisibility(True)
 
     def toggleVisibility(self, state: bool = True) -> None:
-        color = self.color if state else "transparent"
+        color = self.color if state else self.color.copy(a=26)
 
         self.isVisible = state
         self.setStyleSheet(f"background-color: {color}; border-radius: {self.radius}px; border: 1px solid {self.border};")
