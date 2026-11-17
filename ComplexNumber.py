@@ -1,6 +1,6 @@
 import cmath
 import math
-from typing import List, Union
+from typing import List, Optional, Union
 from utils import hideDecimal, rad2deg
 
 
@@ -137,9 +137,18 @@ class ComplexNumber:
     def imag(self) -> "ComplexNumber":
         return ComplexNumber([0.0, self.i], self.sign)
 
-    def __str__(self, form: str = "r") -> str:
+    def __str__(self, form: str = "r", precision: Optional[int] = None) -> str:
         r: float = self.r
         i: float = self.i
+
+        if(precision is not None):
+            r = round(r, precision)
+            i = round(i, precision)
+
+            if(r == 0):
+                r = 0.0
+            if(i == 0):
+                i = 0.0
 
         if(r != 0 and abs(r) < 1e-12 * abs(i)):
             r = 0.0

@@ -33,6 +33,7 @@
 @canvas_axisFontFamily = Arial;          /* Font family of axis numbers */
 @canvas_numberFontSize = 12;             /* Font size of complex number labels */
 @canvas_numberFontFamily = Arial;        /* Font family of complex number labels */
+@canvas_numberPrecision = 3;             /* Decimal places of complex number labels */
 
 /* CSS */
 @sidebar_backgroundColor = rgb(255, 255, 255);

@@ -46,6 +46,7 @@ class Canvas(QPixmap):
         self.axisFontFamily: str = self.parent.css.var("canvas_axisFontFamily")
         self.numberFontSize: float = self.parent.css.var("canvas_numberFontSize", float)
         self.numberFontFamily: str = self.parent.css.var("canvas_numberFontFamily")
+        self.numberPrecision: int = self.parent.css.var("canvas_numberPrecision", int)
 
         # Precomputing values
         self.axisFont: QFont = QFont(self.axisFontFamily, int(self.axisFontSize))
@@ -143,7 +144,7 @@ class Canvas(QPixmap):
                     painter.drawLine(int(x1), int(y1), int(x2), int(y2))
 
             for value, (x, y) in zip(item.values, points):
-                label = value.__str__("r")
+                label = value.__str__("r", self.numberPrecision)
 
                 self.drawCircle(
                     painter,
