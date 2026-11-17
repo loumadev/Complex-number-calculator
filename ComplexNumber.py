@@ -1,87 +1,165 @@
-import re
+import cmath
 import math
 from typing import List, Union
 from utils import hideDecimal, rad2deg
 
 
 class ComplexNumber:
-    def __init__(self, number: Union[str, List[float]], sign: str = "i") -> None:
-        r: float
-        i: float
-
-        # parse
-        if(isinstance(number, str) and number):
-            number = re.sub(r"\s", "", number.replace("−", "-"))
-            match = re.search(rf"[+\\-]?(?:[0-9.,]*[{sign}](?![0-9a-z.,])|[{sign}][0-9.,]+)", number)
-
-            imag: str = match[0] if match else "0"
-            r = float(number.replace(str(imag), "") or "0")
-            imag = "1" if imag == sign else imag.replace(sign, "")
-            i = float(imag + "1" if imag == "+" or imag == "-" else imag)
-
-        elif (isinstance(number, list)):
-            r = float(number[0])
-            i = float(number[1])
+    def __init__(self, number: Union[float, int, List[float]], sign: str = "i") -> None:
+        if(isinstance(number, list)):
+            self.r: float = float(number[0])
+            self.i: float = float(number[1])
+        elif(isinstance(number, (float, int))):
+            self.r: float = float(number)
+            self.i: float = 0.0
         else:
-            raise TypeError(number + " is not a valid complex number")
+            raise TypeError(f"{number!r} is not a valid complex number")
 
-        # init
-        self.r: float = r
-        self.i: float = i
         self.sign: str = sign
-
         self.distance: float = math.hypot(self.r, self.i)
         self.angle: float = math.atan2(self.i, self.r)
 
+    def toComplex(self) -> complex:
+        return complex(self.r, self.i)
+
+    @staticmethod
+    def fromComplex(value: complex) -> "ComplexNumber":
+        return ComplexNumber([value.real, value.imag])
+
+    def isZero(self) -> bool:
+        return self.r == 0 and self.i == 0
+
     def add(self, x: "ComplexNumber") -> "ComplexNumber":
-        if(self.sign != x.sign):
-            raise TypeError("Cannot add two numbers with different imaginary parts")
-
-        r = self.r + x.r
-        c = self.i + x.i
-
-        return ComplexNumber([r, c], self.sign)
+        return self._binop(lambda a, b: a + b, x)
 
     def sub(self, x: "ComplexNumber") -> "ComplexNumber":
-        if(self.sign != x.sign):
-            raise TypeError("Cannot subtract two numbers with different imaginary parts")
-
-        r = self.r - x.r
-        c = self.i - x.i
-
-        return ComplexNumber([r, c], self.sign)
+        return self._binop(lambda a, b: a - b, x)
 
     def mult(self, x: "ComplexNumber") -> "ComplexNumber":
-        if(self.sign != x.sign):
-            raise TypeError("Cannot multiply two numbers with different imaginary parts")
-
-        r = self.r * x.r - self.i * x.i
-        c = self.r * x.i + x.r * self.i
-
-        return ComplexNumber([r, c], self.sign)
+        return self._binop(lambda a, b: a * b, x)
 
     def div(self, x: "ComplexNumber") -> "ComplexNumber":
-        if(self.sign != x.sign):
-            raise TypeError("Cannot divide two numbers with different imaginary parts")
+        if(x.isZero()):
+            raise ZeroDivisionError("Division by zero")
 
-        r = self.r * x.r + self.i * x.i
-        c = self.i * x.r - self.r * x.i
-        d = x.r * x.r + x.i * x.i
+        return self._binop(lambda a, b: a / b, x)
 
-        return ComplexNumber([r / d, c / d], self.sign)
+    def _binop(self, op, x: "ComplexNumber") -> "ComplexNumber":
+        return self.fromComplex(op(self.toComplex(), x.toComplex()))
+
+    def neg(self) -> "ComplexNumber":
+        return ComplexNumber([-self.r, -self.i], self.sign)
+
+    def conj(self) -> "ComplexNumber":
+        return ComplexNumber([self.r, -self.i], self.sign)
+
+    def reciprocal(self) -> "ComplexNumber":
+        return ComplexNumber([0.0, 0.0], self.sign).div(self)
+
+    def pow(self, x: "ComplexNumber") -> "ComplexNumber":
+        if(self.isZero()):
+            if(x.isZero()):
+                return ComplexNumber([1.0, 0.0], self.sign)
+            if(x.i == 0 and x.r > 0):
+                return ComplexNumber([0.0, 0.0], self.sign)
+            raise ZeroDivisionError("Zero cannot be raised to a non-positive power")
+
+        return self.fromComplex(self.toComplex() ** x.toComplex())
+
+    def powInt(self, n: int) -> "ComplexNumber":
+        if(self.isZero() and n < 0):
+            raise ZeroDivisionError("Zero cannot be raised to a negative power")
+
+        return self.fromComplex(self.toComplex() ** n)
+
+    def exp(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.exp(self.toComplex()))
+
+    def log(self) -> "ComplexNumber":
+        if(self.isZero()):
+            raise ValueError("log(0) is undefined")
+
+        return self.fromComplex(cmath.log(self.toComplex()))
+
+    def log10(self) -> "ComplexNumber":
+        return self.log().div(ComplexNumber([math.log(10.0), 0.0], self.sign))
+
+    def logBase(self, base: "ComplexNumber") -> "ComplexNumber":
+        if(base.isZero()):
+            raise ValueError("Logarithm base cannot be zero")
+        if(base.r == 1.0 and base.i == 0.0):
+            raise ZeroDivisionError("Logarithm base cannot be one")
+
+        return self.log().div(base.log())
+
+    def sqrt(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.sqrt(self.toComplex()))
+
+    def sin(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.sin(self.toComplex()))
+
+    def cos(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.cos(self.toComplex()))
+
+    def tan(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.tan(self.toComplex()))
+
+    def sinh(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.sinh(self.toComplex()))
+
+    def cosh(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.cosh(self.toComplex()))
+
+    def tanh(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.tanh(self.toComplex()))
+
+    def asin(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.asin(self.toComplex()))
+
+    def acos(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.acos(self.toComplex()))
+
+    def atan(self) -> "ComplexNumber":
+        return self.fromComplex(cmath.atan(self.toComplex()))
+
+    def abs(self) -> "ComplexNumber":
+        return ComplexNumber([self.distance, 0.0], self.sign)
+
+    def arg(self) -> "ComplexNumber":
+        if(self.isZero()):
+            raise ValueError("arg(0) is undefined")
+
+        return ComplexNumber([self.angle, 0.0], self.sign)
+
+    def real(self) -> "ComplexNumber":
+        return ComplexNumber([self.r, 0.0], self.sign)
+
+    def imag(self) -> "ComplexNumber":
+        return ComplexNumber([0.0, self.i], self.sign)
 
     def __str__(self, form: str = "r") -> str:
-        i: Union[str, float] = float(re.sub(r"^[+\-]", "", str(self.i)))
-        s = "-" if self.i < 0 else "+"
+        r: float = self.r
+        i: float = self.i
+
+        if(r != 0 and abs(r) < 1e-12 * abs(i)):
+            r = 0.0
+        elif(i != 0 and abs(i) < 1e-12 * abs(r)):
+            i = 0.0
+
+        iAbs = abs(i)
+        s = "-" if i < 0 else "+"
 
         d = hideDecimal(round(self.distance, 2))
         a = hideDecimal(round(rad2deg(self.angle), 2))
 
         if(form == "r"):
-            space = (" " if self.r and i else "")
-            r = (hideDecimal(self.r) if self.r else "") + space
-            i = (s if (r or s == "-") and i else "") + space + (hideDecimal(i) + self.sign if i else "")
-            return r + i
+            if(r == 0 and i == 0):
+                return "0"
+
+            space = (" " if r and iAbs else "")
+            rStr = (hideDecimal(r) if r else "") + space
+            iStr = (s if (rStr or s == "-") and iAbs else "") + space + (hideDecimal(iAbs) + self.sign if iAbs else "")
+            return rStr + iStr
         elif(form == "a"):
             return f"{d} / {a}°"
         elif(form == "p"):

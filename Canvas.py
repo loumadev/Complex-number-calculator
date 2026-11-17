@@ -3,12 +3,10 @@ from Color import Color
 from math import floor
 
 from utils import clamp, closest, floorMultiple
-from PyQt5.QtCore import Qt, QRect
-from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QImage, QPainter, QPen, QPixmap, QMouseEvent, QWheelEvent
-from PyQt5.QtWidgets import QAction, QApplication, QButtonGroup, QFileDialog, QGraphicsScene, QLabel, QMainWindow
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor, QFont, QFontMetrics, QImage, QPainter, QPen, QPixmap, QMouseEvent, QWheelEvent
+from PyQt5.QtWidgets import QLabel
 from typing import TYPE_CHECKING, List, Optional
-from ComplexNumber import ComplexNumber
-from Sidebar import Circle, Item
 
 if TYPE_CHECKING:
     from Calculator import Calculator
@@ -37,6 +35,7 @@ class Canvas(QPixmap):
         self.scaleMin: float = self.parent.css.var("canvas_scaleMin", float)
         self.pointRadius: int = self.parent.css.var("canvas_pointRadius", int)
         self.originRadius: int = self.parent.css.var("canvas_originRadius", int)
+        self.connectionLineWidth: float = self.parent.css.var("canvas_connectionLineWidth", float)
         self.backgroundColor: Color = self.parent.css.var("canvas_backgroundColor", Color)
         self.gridColor: Color = self.parent.css.var("canvas_gridColor", Color)
         self.axisColor: Color = self.parent.css.var("canvas_axisColor", Color)
@@ -125,32 +124,43 @@ class Canvas(QPixmap):
         originY = self.origin[1] * self.scale + self.height() / 2
 
         for item in self.parent.sidebar.items:
-            number = item.number
             circle = item.icon.circle
 
-            if(not number or not circle.isVisible):
+            if(not item.values or not circle.isVisible):
                 continue
 
-            x = originX + +number.r * self.pixelRatio * self.scale
-            y = originY + -number.i * self.pixelRatio * self.scale
-            value = number.__str__("r")
+            points = []
 
-            self.drawCircle(
-                painter,
-                x,
-                y,
-                self.pointRadius,
-                circle.color,
-                circle.border
-            )
+            for value in item.values:
+                x = originX + value.r * self.pixelRatio * self.scale
+                y = originY - value.i * self.pixelRatio * self.scale
+                points.append((x, y))
 
-            painter.setPen(circle.border)
+            if(len(points) > 1):
+                painter.setPen(QPen(circle.border, self.connectionLineWidth, Qt.DashLine, Qt.RoundCap, Qt.RoundJoin))
 
-            painter.drawText(
-                int(x - self.numberMetrics.boundingRect(value).width()/2),
-                int(y - 10),
-                value
-            )
+                for (x1, y1), (x2, y2) in zip(points, points[1:]):
+                    painter.drawLine(int(x1), int(y1), int(x2), int(y2))
+
+            for value, (x, y) in zip(item.values, points):
+                label = value.__str__("r")
+
+                self.drawCircle(
+                    painter,
+                    x,
+                    y,
+                    self.pointRadius,
+                    circle.color,
+                    circle.border
+                )
+
+                painter.setPen(circle.border)
+
+                painter.drawText(
+                    int(x - self.numberMetrics.boundingRect(label).width()/2),
+                    int(y - 10),
+                    label
+                )
 
     # Renders the grid (this was the tricky part)
     def renderGrid(self) -> None:

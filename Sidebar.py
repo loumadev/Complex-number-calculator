@@ -1,10 +1,11 @@
 import random
 import re
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 from Color import Color
 from ComplexNumber import ComplexNumber
+from ExpressionParser import ASTNode, InterpretError, Interpreter, ParseError, Parser, TokenizeError, Tokenizer, builtinContext, referencesOf
 from PyQt5.QtCore import QEvent, QObject, Qt, QSize
-from PyQt5.QtGui import QKeyEvent, QMouseEvent, QPaintEvent, QFont, QImage, QPainter, QPixmap, QRegion
+from PyQt5.QtGui import QKeyEvent, QMouseEvent, QPaintEvent, QImage, QPainter, QPixmap
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QLayout, QLineEdit, QScrollArea, QSizePolicy, QStyle, QStyleOption, QVBoxLayout, QWidget
 
 if TYPE_CHECKING:
@@ -17,22 +18,25 @@ class Sidebar(QWidget):
         self.parent = parent
 
         self.items: List["Item"] = []
+        self.activeItem: Optional["Item"] = None
         self.color: int = random.randint(0, 255)
         self.colorStep: int = self.parent.css.var("sidebar_colorStep", int)
         self.colorOffset: int = self.parent.css.var("sidebar_colorOffset", int)
+        self.maxValues: int = self.parent.css.var("maxValues", int)
+        self.errorBarHeight: int = self.parent.css.var("sidebar_errorBarHeight", int)
         self.layout: QVBoxLayout = QVBoxLayout(self)
         self.scrollArea: QScrollArea = QScrollArea(self.parent)
 
         # Setup scrollarea
         self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scrollArea.setFixedSize(self.parent.sidebarWidth, self.parent.height())
+        self.scrollArea.setFixedSize(self.parent.sidebarWidth, self.parent.height() - self.errorBarHeight)
         self.scrollArea.setStyleSheet("border: none;")
         self.scrollArea.setWidget(self)
 
         # Setup sidebar itself
         self.setFixedWidth(self.parent.sidebarWidth)
-        self.setMinimumHeight(self.parent.height() - 2)  # 2 to fix scroll height
+        self.setMinimumHeight(self.parent.height() - self.errorBarHeight - 2)  # 2 to fix scroll height
         self.layout.setAlignment(Qt.AlignTop)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
@@ -67,6 +71,129 @@ class Sidebar(QWidget):
     def updateCanvas(self) -> None:
         self.parent.canvas.update()
 
+    def recompute(self) -> None:
+        items = self.items
+
+        nameToItem: Dict[str, "Item"] = {}
+        for item in items:
+            if(item.name and item.name not in nameToItem):
+                nameToItem[item.name] = item
+
+        dependencies: Dict["Item", Set["Item"]] = {}
+        dependents: Dict["Item", List["Item"]] = {item: [] for item in items}
+
+        for item in items:
+            deps: Set["Item"] = set()
+
+            for name in referencesOf(item.ast) if(item.ast is not None) else []:
+                target = nameToItem.get(name)
+
+                if(target is not None):
+                    deps.add(target)
+
+            dependencies[item] = deps
+
+            for dep in deps:
+                dependents[dep].append(item)
+
+        indegree = {item: len(deps) for item, deps in dependencies.items()}
+        queue = [item for item in items if indegree[item] == 0]
+        order: List["Item"] = []
+
+        while(queue):
+            item = queue.pop(0)
+            order.append(item)
+
+            for dependent in dependents[item]:
+                indegree[dependent] -= 1
+
+                if(indegree[dependent] == 0):
+                    queue.append(dependent)
+
+        unresolved = [item for item in items if indegree[item] > 0]
+        unresolvedSet = set(unresolved)
+
+        for item in items:
+            item.values = []
+            item.evalError = None
+
+        for item in unresolved:
+            cycle = self._findCycleFrom(item, dependencies, unresolvedSet)
+            item.evalError = ("Circular reference detected: " + " → ".join([dep.name for dep in cycle])) if(cycle) else "Circular reference detected"
+
+        context = builtinContext()
+        for name in nameToItem:
+            context[name] = []
+
+        for item in order:
+            if(item.ast is None):
+                continue
+
+            try:
+                item.values = Interpreter(context, self.maxValues).interpret(item.ast)
+            except InterpretError as err:
+                item.evalError = str(err)
+
+            if(item.name and nameToItem.get(item.name) is item):
+                context[item.name] = item.values
+
+        for item in items:
+            item.error = item.parseError or item.evalError
+            item.refreshIcon()
+            item.refreshErrorDisplay()
+
+        self.reportError()
+        self.updateCanvas()
+
+    def _findCycleFrom(self, start: "Item", dependencies: Dict["Item", Set["Item"]], unresolvedSet: Set["Item"]) -> Optional[List["Item"]]:
+        state: Dict["Item", int] = {start: 1}
+        path: List["Item"] = [start]
+        stack: List[Tuple["Item", List["Item"]]] = [(start, list(dependencies[start]))]
+
+        while(stack):
+            item, deps = stack[-1]
+            advanced = False
+
+            for dep in deps:
+                if(dep not in unresolvedSet):
+                    continue
+
+                if(dep not in state):
+                    state[dep] = 1
+                    stack[-1] = (item, [d for d in deps if d is not dep])
+                    stack.append((dep, list(dependencies[dep])))
+                    path.append(dep)
+                    advanced = True
+                    break
+
+                if(state[dep] == 1):
+                    idx = path.index(dep)
+                    return path[idx:] + [dep]
+
+            if(not advanced):
+                stack.pop()
+                path.pop()
+                state[item] = 2
+
+        return None
+
+    def reportError(self) -> None:
+        primary: Optional["Item"] = None
+
+        if(self.activeItem is not None and self.activeItem.error):
+            primary = self.activeItem
+        else:
+            for item in self.items:
+                if(item.error):
+                    primary = item
+                    break
+
+        if(primary is not None):
+            prefix = f"[{primary.name}] " if(primary.name) else ""
+            self.parent.setErrorMessage(prefix + primary.error)
+        else:
+            self.parent.setErrorMessage("")
+
     def paintEvent(self, event: QPaintEvent) -> None:
         o = QStyleOption()
         o.initFrom(self)
@@ -85,73 +212,74 @@ class Input(QLineEdit):
         self.returnPressed.connect(self.onInput)
 
     # Expression processing
-    def parseExpression(self) -> None:
-        input = self.text().replace(" ", "")
-        name = (re.search(r"^[a-zA-Z]+(?==)", input) or [None])[0]
-        value = input.replace(name + "=", "") if name else input
+    def parseInput(self) -> Tuple[Optional[str], str]:
+        text = self.text()
+        match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\Z", text, re.DOTALL)
 
-        if(not value):
-            return self.parent.showIcon(self.parent.icon.plus)
+        if(match):
+            return (match[1], match[2])
+
+        return (None, text)
+
+    def parseExpression(self) -> None:
+        item = self.parent
+        sidebar = item.parent
+        sidebar.activeItem = item
+
+        name, expression = self.parseInput()
 
         if(name):
-            self.parent.name = name
+            item.name = name
+
+        expression = expression.strip()
+
+        if(not expression):
+            item.ast = None
+            item.parseError = None
+
+            sidebar.recompute()
+            return
 
         try:
-            self.parent.number = ComplexNumber(value)
-            self.parent.showIcon(self.parent.icon.circle)
-        except Exception as err:
-            self.parent.parent.parent.verbose and print(err)
+            tokenizer = Tokenizer(expression)
+            item.ast = Parser(tokenizer).parse()
+            item.parseError = None
+        except(TokenizeError, ParseError) as err:
+            item.ast = None
+            item.parseError = str(err)
 
-            try:
-                expr = re.search(r"([a-zA-Z]+)([+\-*\/])([a-zA-Z]+)", value)
-
-                num1 = self.parent.parent.findItemByName(expr[1]).number
-                num2 = self.parent.parent.findItemByName(expr[3]).number
-                operator = expr[2]
-
-                if(operator == "+"):
-                    self.parent.number = num1.add(num2)
-                elif(operator == "-"):
-                    self.parent.number = num1.sub(num2)
-                elif(operator == "*"):
-                    self.parent.number = num1.mult(num2)
-                elif(operator == "/"):
-                    self.parent.number = num1.div(num2)
-                else:
-                    raise Exception("Invalid expression operator")
-
-                self.parent.showIcon(self.parent.icon.circle)
-            except Exception as err:
-                self.parent.parent.parent.verbose and print(err)
-                self.parent.number = None
-                self.parent.showIcon(self.parent.icon.alert)
-
-        self.parent.parent.updateCanvas()
+        sidebar.recompute()
 
     def processExpression(self) -> None:
-        isPlaceholder = self.parent.parent.placeholder == self.parent
-        input = self.text().replace(" ", "")
+        item = self.parent
+        sidebar = item.parent
+        isPlaceholder = sidebar.placeholder == item
 
-        if(not input):
-            if(not isPlaceholder and self.parent in self.parent.parent.items):
-                self.parent.parent.items.remove(self.parent)
-                self.parent.parent.layout.removeWidget(self.parent)
-                self.parent.setParent(None)
-                self.parent.icon.setParent(None)
-                self.parent.parent.updateCanvas()
+        if(not self.text().strip()):
+            if(not isPlaceholder and item in sidebar.items):
+                sidebar.items.remove(item)
+                sidebar.layout.removeWidget(item)
+                item.setParent(None)
+                item.icon.setParent(None)
+
+                if(sidebar.activeItem is item):
+                    sidebar.activeItem = None
+
+                sidebar.recompute()
             else:
-                self.parent.showIcon(self.parent.icon.plus)
+                item.showIcon(item.icon.plus)
             return
 
         self.parseExpression()
 
         if(isPlaceholder):
-            self.parent.parent.placeholder = Item(self.parent.parent)
-            self.parent.parent.placeholder.input.setFocus()
+            sidebar.placeholder = Item(sidebar)
+            sidebar.placeholder.input.setFocus()
 
-        if(not self.parent.name):
-            self.parent.name = self.parent.parent.generateName()
-            self.setText(self.parent.name + "=" + input)
+        if(not item.name):
+            item.name = sidebar.generateName()
+            self.setText(item.name + "=" + self.text())
+            self.parseExpression()
 
     # Event emitter
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
@@ -209,7 +337,6 @@ class Icon(QWidget):
         self.plus: SVGIcon = SVGIcon("resources/plus.svg", 0.05)
         self.alert: SVGIcon = SVGIcon("resources/alert.svg", 0.05)
         self.circle: Circle = Circle(self)
-        self.number: Optional[ComplexNumber] = None
 
         self.setFixedSize(self.parent.parent.parent.itemHeight, self.parent.parent.parent.itemHeight)
         self.layout.setAlignment(Qt.AlignCenter)
@@ -235,7 +362,11 @@ class Item(QWidget):
         self.parent = parent
 
         self.name: Optional[str] = None
-        self.number: Optional[ComplexNumber] = None
+        self.ast: Optional[ASTNode] = None
+        self.values: List[ComplexNumber] = []
+        self.parseError: Optional[str] = None
+        self.evalError: Optional[str] = None
+        self.error: Optional[str] = None
         self.color: Color = self.parent.generateColor()
         self.layout: QHBoxLayout = QHBoxLayout(self)
         self.icon: Icon = Icon(self)
@@ -256,6 +387,22 @@ class Item(QWidget):
         scrollHeight = len(self.parent.items) * self.parent.parent.itemHeight
         self.parent.setMinimumHeight(scrollHeight)
         self.parent.scrollArea.verticalScrollBar().setValue(scrollHeight)
+
+    def refreshIcon(self) -> None:
+        if(self.values):
+            self.showIcon(self.icon.circle)
+        elif(self.error):
+            self.showIcon(self.icon.alert)
+        else:
+            self.showIcon(self.icon.plus)
+
+    def refreshErrorDisplay(self) -> None:
+        self.setToolTip(self.error or "")
+
+        if(self.error):
+            self.input.setStyleSheet(f"color: {self.parent.parent.css.var('sidebar_errorColor')};")
+        else:
+            self.input.setStyleSheet("")
 
     def showIcon(self, icon: SVGIcon) -> None:
         icon != self.icon.plus and self.icon.plus.hide()
@@ -290,7 +437,7 @@ class Circle(QWidget):
 
         self.isVisible = state
         self.setStyleSheet(f"background-color: {color}; border-radius: {self.radius}px; border: 1px solid {self.border};")
-        self.parent.parent.number and self.parent.parent.parent.updateCanvas()
+        self.parent.parent.values and self.parent.parent.parent.updateCanvas()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         self.toggleVisibility(not self.isVisible)

@@ -9,6 +9,12 @@
 @sidebar_circleRadius = 10;              /* Radius of the toggle button circle */
 @sidebar_colorStep = 20;                 /* Angle change of circle color */
 @sidebar_colorOffset = 8;                /* Offset to translate color by each step */
+@sidebar_errorBarHeight = 26;            /* Height of the error message bar */
+@sidebar_errorColor = rgb(178, 34, 34);  /* Color of the input text when there is an error */
+@sidebar_errorBarColor = rgb(150, 30, 30);
+@sidebar_errorBarBackground = rgb(250, 240, 240);
+
+@maxValues = 8;                          /* Maximal number of values a single expression can yield */
 
 @canvas_pixelRatio = 50;                 /* 1 unit in pixels */
 @canvas_scaleRate = 20;                  /* Speed of zooming */
@@ -16,6 +22,7 @@
 @canvas_scaleMin = 0.02;                 /* Minimal scale */
 @canvas_pointRadius = 6;                 /* Radius of number */
 @canvas_originRadius = 3;                /* Radius of origin point */
+@canvas_connectionLineWidth = 1.5;       /* Width of the line connecting the values of a single expression */
 @canvas_helperAxis = 5;                  /* Number of helper axis in the grid */
 @canvas_backgroundColor = rgb(255, 255, 255);
 @canvas_gridColor = rgb(200, 200, 200);
@@ -55,6 +62,15 @@ Input {
     font-family: @sidebar_fontFamily;
     color: @sidebar_color;
     background-color: transparent;
+}
+
+QLabel#errorLabel {
+    border-top: 1px solid @sidebar_borderColor;
+    color: @sidebar_errorBarColor;
+    background-color: @sidebar_errorBarBackground;
+    font-family: @sidebar_fontFamily;
+    font-size: 11px;
+    padding: 2px 8px;
 }
 
 /* TODO: Move variables from code to this stylesheet */
