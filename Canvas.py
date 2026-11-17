@@ -49,9 +49,9 @@ class Canvas(QPixmap):
         self.numberFontFamily: str = self.parent.css.var("canvas_numberFontFamily")
 
         # Precomputing values
-        self.axisFont: QFont = QFont(self.axisFontFamily, self.axisFontSize)
+        self.axisFont: QFont = QFont(self.axisFontFamily, int(self.axisFontSize))
         self.axisMetrics: QFontMetrics = QFontMetrics(self.axisFont)
-        self.numberFont: QFont = QFont(self.numberFontFamily, self.numberFontSize)
+        self.numberFont: QFont = QFont(self.numberFontFamily, int(self.numberFontSize))
         self.numberMetrics: QFontMetrics = QFontMetrics(self.numberFont)
 
         self._generateScaleRange()
@@ -147,8 +147,8 @@ class Canvas(QPixmap):
             painter.setPen(circle.border)
 
             painter.drawText(
-                x - self.numberMetrics.boundingRect(value).width()/2,
-                y - 10,
+                int(x - self.numberMetrics.boundingRect(value).width()/2),
+                int(y - 10),
                 value
             )
 
@@ -186,7 +186,7 @@ class Canvas(QPixmap):
 
             # Draw line (if the line is a helper line, draw it behind everything else)
             isHelper and painter.setCompositionMode(QPainter.CompositionMode_DestinationOver)
-            painter.drawLine(x, 0, x, self.height())
+            painter.drawLine(int(x), 0, int(x), self.height())
             isHelper and painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
 
             # Draw number for axis
@@ -197,8 +197,8 @@ class Canvas(QPixmap):
 
                 painter.setPen(self.textColor)
                 painter.drawText(
-                    x - w - 4,
-                    clamp(originY + h + 2, h + 2, self.height() - 3),
+                    int(x - w - 4),
+                    int(clamp(originY + h + 2, h + 2, self.height() - 3)),
                     numberStr
                 )
 
@@ -217,7 +217,7 @@ class Canvas(QPixmap):
 
             # Draw line (if the line is a helper line, draw it behind everything else)
             isHelper and painter.setCompositionMode(QPainter.CompositionMode_DestinationOver)
-            painter.drawLine(0, y, self.width(), y)
+            painter.drawLine(0, int(y), self.width(), int(y))
             isHelper and painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
 
             # Draw number for axis (and prevent from drawing the "0" two times)
@@ -228,8 +228,8 @@ class Canvas(QPixmap):
 
                 painter.setPen(self.textColor)
                 painter.drawText(
-                    clamp(originX - w - 4, 3, self.width() - w - 4),
-                    y + h + 2,
+                    int(clamp(originX - w - 4, 3, self.width() - w - 4)),
+                    int(y + h + 2),
                     numberStr
                 )
 
@@ -251,7 +251,7 @@ class Canvas(QPixmap):
         stroke and painter.setPen(QPen(stroke, strokeWidth, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         fill and painter.setBrush(fill)
 
-        painter.drawEllipse(x - r, y - r, r * 2, r * 2)
+        painter.drawEllipse(int(x) - r, int(y) - r, r * 2, r * 2)
         painter.setRenderHint(QPainter.Antialiasing, False)
 
     # Events
