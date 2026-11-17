@@ -6,15 +6,16 @@
 # }
 
 import re
+from typing import Any, Dict, Optional, Tuple, Type
 
 
 class CSS():
-    def __init__(self, file, content, variables):
-        self.file = file
-        self.content = content
-        self.variables = variables
+    def __init__(self, file: str, content: str, variables: Dict[str, str]) -> None:
+        self.file: str = file
+        self.content: str = content
+        self.variables: Dict[str, str] = variables
 
-    def var(self, name, type=None):
+    def var(self, name: str, type: Optional[Type[Any]] = None) -> Any:
         if(not name in self.variables):
             raise ReferenceError(f"Variable '{name}' cannot be found in {CSS._getFilename(self.file)}")
 
@@ -23,15 +24,15 @@ class CSS():
         return type(value) if type else value
 
     @staticmethod
-    def process(file):
+    def process(file: str) -> "CSS":
         css = open(file, "r").read()
-        variables = {}
+        variables: Dict[str, str] = {}
 
-        def variableProcessor(m: re.Match):
-            match = m[0]
-            varDef = m[1]
-            value = m[2]
-            varRef = m[3]
+        def variableProcessor(m: re.Match) -> str:
+            match: str = m[0]
+            varDef: Optional[str] = m[1]
+            value: Optional[str] = m[2]
+            varRef: Optional[str] = m[3]
 
             if(varDef):
                 variables[varDef] = value
@@ -51,11 +52,11 @@ class CSS():
         return CSS(file, css, variables)
 
     @staticmethod
-    def _getFilename(path):
+    def _getFilename(path: str) -> str:
         return re.search(r"[^\/\\]+$", path)[0]
 
     @staticmethod
-    def _getLine(text, index):
+    def _getLine(text: str, index: int) -> Tuple[int, int, str]:
         ch = ""
         i = 0
 
@@ -71,7 +72,7 @@ class CSS():
 
             if(ch == '\n' or ch == '\r'):
                 if(i >= index):
-                    return [lineNumber, indexPos, lineBuffer]
+                    return (lineNumber, indexPos, lineBuffer)
                 lineBuffer = ""
                 lineNumber += 1
             else:

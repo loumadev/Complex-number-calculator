@@ -5,18 +5,19 @@ from utils import hideDecimal, rad2deg
 
 
 class ComplexNumber:
-    def __init__(self, number: Union[str, List[float]], sign: str = "i"):
-        r = i = "0"
+    def __init__(self, number: Union[str, List[float]], sign: str = "i") -> None:
+        r: float
+        i: float
 
         # parse
         if(isinstance(number, str) and number):
             number = re.sub(r"\s", "", number.replace("−", "-"))
             match = re.search(rf"[+\\-]?(?:[0-9.,]*[{sign}](?![0-9a-z.,])|[{sign}][0-9.,]+)", number)
 
-            i = match[0] if match else "0"
-            r = float(number.replace(str(i), "") or "0")
-            i = "1" if i == sign else i.replace(sign, "")
-            i = float(i + "1" if i == "+" or i == "-" else i)
+            imag: str = match[0] if match else "0"
+            r = float(number.replace(str(imag), "") or "0")
+            imag = "1" if imag == sign else imag.replace(sign, "")
+            i = float(imag + "1" if imag == "+" or imag == "-" else imag)
 
         elif (isinstance(number, list)):
             r = float(number[0])
@@ -25,12 +26,12 @@ class ComplexNumber:
             raise TypeError(number + " is not a valid complex number")
 
         # init
-        self.r = r
-        self.i = i
-        self.sign = sign
+        self.r: float = r
+        self.i: float = i
+        self.sign: str = sign
 
-        self.distance = math.hypot(self.r, self.i)
-        self.angle = math.atan2(self.i, self.r)
+        self.distance: float = math.hypot(self.r, self.i)
+        self.angle: float = math.atan2(self.i, self.r)
 
     def add(self, x: "ComplexNumber") -> "ComplexNumber":
         if(self.sign != x.sign):
@@ -69,8 +70,8 @@ class ComplexNumber:
 
         return ComplexNumber([r / d, c / d], self.sign)
 
-    def __str__(self, form: str = "r") -> "ComplexNumber":
-        i = float(re.sub(r"^[+\-]", "", str(self.i)))
+    def __str__(self, form: str = "r") -> str:
+        i: Union[str, float] = float(re.sub(r"^[+\-]", "", str(self.i)))
         s = "-" if self.i < 0 else "+"
 
         d = hideDecimal(round(self.distance, 2))
@@ -90,5 +91,5 @@ class ComplexNumber:
         else:
             raise TypeError("Unknown number form. Supported r = rectangular, a = angle, p = polar, e = exponential")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"ComplexNumber {{r: {self.r}, i: {self.i}, sign: {self.sign}, distance: {self.distance}, angle: {self.angle}}}"

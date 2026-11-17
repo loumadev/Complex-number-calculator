@@ -1,23 +1,27 @@
 import random
 import re
+from typing import TYPE_CHECKING, List, Optional
 from Color import Color
 from ComplexNumber import ComplexNumber
-from PyQt5.QtCore import QEvent, Qt
-from PyQt5.QtGui import QFont, QImage, QPainter, QPixmap, QRegion
+from PyQt5.QtCore import QEvent, QObject, Qt, QSize
+from PyQt5.QtGui import QKeyEvent, QMouseEvent, QPaintEvent, QFont, QImage, QPainter, QPixmap, QRegion
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QLayout, QLineEdit, QScrollArea, QSizePolicy, QStyle, QStyleOption, QVBoxLayout, QWidget
+
+if TYPE_CHECKING:
+    from Calculator import Calculator
 
 
 class Sidebar(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional["Calculator"] = None) -> None:
         super().__init__(parent)
         self.parent = parent
 
-        self.items = []
-        self.color = random.randint(0, 255)
-        self.colorStep = self.parent.css.var("sidebar_colorStep", int)
-        self.colorOffset = self.parent.css.var("sidebar_colorOffset", int)
-        self.layout = QVBoxLayout(self)
-        self.scrollArea = QScrollArea(self.parent)
+        self.items: List["Item"] = []
+        self.color: int = random.randint(0, 255)
+        self.colorStep: int = self.parent.css.var("sidebar_colorStep", int)
+        self.colorOffset: int = self.parent.css.var("sidebar_colorOffset", int)
+        self.layout: QVBoxLayout = QVBoxLayout(self)
+        self.scrollArea: QScrollArea = QScrollArea(self.parent)
 
         # Setup scrollarea
         self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -35,19 +39,19 @@ class Sidebar(QWidget):
 
         # Shadow is not visible due to it's z-index. Maybe another stacking context?
         # I didn't figure out how to fix it :/
-        self.shadow = QGraphicsDropShadowEffect()
+        self.shadow: QGraphicsDropShadowEffect = QGraphicsDropShadowEffect()
         self.shadow.setBlurRadius(10)
         self.shadow.setOffset(0)
         self.shadow.setColor(Color(28, 28, 28))
         self.scrollArea.setGraphicsEffect(self.shadow)
 
         # Create placeholder item
-        self.placeholder = Item(self)
+        self.placeholder: Item = Item(self)
 
-    def findItemByName(self, name):
+    def findItemByName(self, name: str) -> Optional["Item"]:
         return next((item for item in self.items if item.name and item.name == name), None)
 
-    def generateName(self):
+    def generateName(self) -> str:
         name = 65
 
         while self.findItemByName(chr(name)):
@@ -55,15 +59,15 @@ class Sidebar(QWidget):
 
         return chr(name)
 
-    def generateColor(self):
+    def generateColor(self) -> Color:
         self.color += self.colorStep + self.colorOffset
 
         return Color.fromHSL(self.color % 255, 180, 127)
 
-    def updateCanvas(self):
+    def updateCanvas(self) -> None:
         self.parent.canvas.update()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         o = QStyleOption()
         o.initFrom(self)
         p = QPainter(self)
@@ -71,7 +75,7 @@ class Sidebar(QWidget):
 
 
 class Input(QLineEdit):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional["Item"] = None) -> None:
         super().__init__(parent)
         self.parent = parent
 
@@ -81,7 +85,7 @@ class Input(QLineEdit):
         self.returnPressed.connect(self.onInput)
 
     # Expression processing
-    def parseExpression(self):
+    def parseExpression(self) -> None:
         input = self.text().replace(" ", "")
         name = (re.search(r"^[a-zA-Z]+(?==)", input) or [None])[0]
         value = input.replace(name + "=", "") if name else input
@@ -124,7 +128,7 @@ class Input(QLineEdit):
 
         self.parent.parent.updateCanvas()
 
-    def processExpression(self):
+    def processExpression(self) -> None:
         isPlaceholder = self.parent.parent.placeholder == self.parent
         input = self.text().replace(" ", "")
 
@@ -150,7 +154,7 @@ class Input(QLineEdit):
             self.setText(self.parent.name + "=" + input)
 
     # Event emitter
-    def eventFilter(self, watched, event):
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         type = event.type()
 
         if(type == QEvent.FocusIn):
@@ -162,50 +166,50 @@ class Input(QLineEdit):
         return False
 
     # Event handlers
-    def keyReleaseEvent(self, event):
+    def keyReleaseEvent(self, event: QKeyEvent) -> None:
         self.parseExpression()
 
-    def onInput(self):
+    def onInput(self) -> None:
         self.processExpression()
         self.clearFocus()
 
-    def onFocus(self, event):
+    def onFocus(self, event: QEvent) -> None:
         pass
 
-    def onBlur(self, event):
+    def onBlur(self, event: QEvent) -> None:
         self.processExpression()
 
 
 class SVGIcon(QLabel):
-    def __init__(self, file, scale=1):
+    def __init__(self, file: str, scale: float = 1) -> None:
         super().__init__()
 
-        self.file = file
-        self.image = QImage(file)
+        self.file: str = file
+        self.image: QImage = QImage(file)
 
-        self.size = self.image.size() * scale
+        self.size: QSize = self.image.size() * scale
         self.image = self.image.scaled(self.size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
 
         self.setPixmap(QPixmap.fromImage(self.image))
         self.setFixedSize(self.size)
         self.setStyleSheet("border: none")
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.drawImage(self.rect(), self.image, self.rect())
 
 
 class Icon(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional["Item"] = None) -> None:
         super().__init__(parent)
         self.parent = parent
 
-        self.layout = QHBoxLayout(self)
-        self.plus = SVGIcon("resources/plus.svg", 0.05)
-        self.alert = SVGIcon("resources/alert.svg", 0.05)
-        self.circle = Circle(self)
-        self.number = None
+        self.layout: QHBoxLayout = QHBoxLayout(self)
+        self.plus: SVGIcon = SVGIcon("resources/plus.svg", 0.05)
+        self.alert: SVGIcon = SVGIcon("resources/alert.svg", 0.05)
+        self.circle: Circle = Circle(self)
+        self.number: Optional[ComplexNumber] = None
 
         self.setFixedSize(self.parent.parent.parent.itemHeight, self.parent.parent.parent.itemHeight)
         self.layout.setAlignment(Qt.AlignCenter)
@@ -218,7 +222,7 @@ class Icon(QWidget):
         self.alert.hide()
         self.circle.hide()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         o = QStyleOption()
         o.initFrom(self)
         p = QPainter(self)
@@ -226,16 +230,16 @@ class Icon(QWidget):
 
 
 class Item(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional["Sidebar"] = None) -> None:
         super().__init__(parent)
         self.parent = parent
 
-        self.name = None
-        self.number = None
-        self.color = self.parent.generateColor()
-        self.layout = QHBoxLayout(self)
-        self.icon = Icon(self)
-        self.input = Input(self)
+        self.name: Optional[str] = None
+        self.number: Optional[ComplexNumber] = None
+        self.color: Color = self.parent.generateColor()
+        self.layout: QHBoxLayout = QHBoxLayout(self)
+        self.icon: Icon = Icon(self)
+        self.input: Input = Input(self)
 
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
         self.layout.setSizeConstraint(QLayout.SetMinAndMaxSize)
@@ -253,14 +257,14 @@ class Item(QWidget):
         self.parent.setMinimumHeight(scrollHeight)
         self.parent.scrollArea.verticalScrollBar().setValue(scrollHeight)
 
-    def showIcon(self, icon: Icon):
+    def showIcon(self, icon: SVGIcon) -> None:
         icon != self.icon.plus and self.icon.plus.hide()
         icon != self.icon.alert and self.icon.alert.hide()
         icon != self.icon.circle and self.icon.circle.hide()
 
         icon.show()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         o = QStyleOption()
         o.initFrom(self)
         p = QPainter(self)
@@ -268,30 +272,30 @@ class Item(QWidget):
 
 
 class Circle(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional["Icon"] = None) -> None:
         super().__init__(parent)
         self.parent = parent
 
-        self.isVisible = True
-        self.color = self.parent.parent.color.copy(a=127)
-        self.border = self.parent.parent.color
-        self.radius = self.parent.parent.parent.parent.css.var("sidebar_circleRadius", int)
+        self.isVisible: bool = True
+        self.color: Color = self.parent.parent.color.copy(a=127)
+        self.border: Color = self.parent.parent.color
+        self.radius: int = self.parent.parent.parent.parent.css.var("sidebar_circleRadius", int)
 
         self.setFixedSize(self.radius * 2, self.radius * 2)
         self.setCursor(Qt.PointingHandCursor)
         self.toggleVisibility(True)
 
-    def toggleVisibility(self, state=True):
+    def toggleVisibility(self, state: bool = True) -> None:
         color = self.color if state else "transparent"
 
         self.isVisible = state
         self.setStyleSheet(f"background-color: {color}; border-radius: {self.radius}px; border: 1px solid {self.border};")
         self.parent.parent.number and self.parent.parent.parent.updateCanvas()
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         self.toggleVisibility(not self.isVisible)
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         o = QStyleOption()
         o.initFrom(self)
         p = QPainter(self)

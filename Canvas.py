@@ -3,50 +3,56 @@ from Color import Color
 from math import floor
 
 from utils import clamp, closest, floorMultiple
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QImage, QPainter, QPen, QPixmap
+from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QImage, QPainter, QPen, QPixmap, QMouseEvent, QWheelEvent
 from PyQt5.QtWidgets import QAction, QApplication, QButtonGroup, QFileDialog, QGraphicsScene, QLabel, QMainWindow
+from typing import TYPE_CHECKING, List, Optional
+from ComplexNumber import ComplexNumber
+from Sidebar import Circle, Item
+
+if TYPE_CHECKING:
+    from Calculator import Calculator
 
 
 class Canvas(QPixmap):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional["Calculator"] = None) -> None:
         super().__init__(parent.width() - parent.sidebarWidth, parent.height())
         self.parent = parent
 
         # Internal
-        self.label = QLabel()
+        self.label: QLabel = QLabel()
         self.label.setPixmap(self)
         self.label.stackUnder(self.parent)
 
         # Properties
         self.parent = parent
-        self.origin = [0, 0]
-        self.prev = [0, 0]
-        self.scale = 1
+        self.origin: List[float] = [0, 0]
+        self.prev: List[float] = [0, 0]
+        self.scale: float = 1
 
         # Settings
-        self.pixelRatio = self.parent.css.var("canvas_pixelRatio", int)
-        self.scaleRate = self.parent.css.var("canvas_scaleRate", int)
-        self.scaleMax = self.parent.css.var("canvas_scaleMax", float)
-        self.scaleMin = self.parent.css.var("canvas_scaleMin", float)
-        self.pointRadius = self.parent.css.var("canvas_pointRadius", int)
-        self.originRadius = self.parent.css.var("canvas_originRadius", int)
-        self.backgroundColor = self.parent.css.var("canvas_backgroundColor", Color)
-        self.gridColor = self.parent.css.var("canvas_gridColor", Color)
-        self.axisColor = self.parent.css.var("canvas_axisColor", Color)
-        self.helperColor = self.parent.css.var("canvas_helperColor", Color)
-        self.textColor = self.parent.css.var("canvas_textColor", Color)
-        self.helperAxis = self.parent.css.var("canvas_helperAxis", int)
-        self.axisFontSize = self.parent.css.var("canvas_axisFontSize", float)
-        self.axisFontFamily = self.parent.css.var("canvas_axisFontFamily")
-        self.numberFontSize = self.parent.css.var("canvas_numberFontSize", float)
-        self.numberFontFamily = self.parent.css.var("canvas_numberFontFamily")
+        self.pixelRatio: int = self.parent.css.var("canvas_pixelRatio", int)
+        self.scaleRate: int = self.parent.css.var("canvas_scaleRate", int)
+        self.scaleMax: float = self.parent.css.var("canvas_scaleMax", float)
+        self.scaleMin: float = self.parent.css.var("canvas_scaleMin", float)
+        self.pointRadius: int = self.parent.css.var("canvas_pointRadius", int)
+        self.originRadius: int = self.parent.css.var("canvas_originRadius", int)
+        self.backgroundColor: Color = self.parent.css.var("canvas_backgroundColor", Color)
+        self.gridColor: Color = self.parent.css.var("canvas_gridColor", Color)
+        self.axisColor: Color = self.parent.css.var("canvas_axisColor", Color)
+        self.helperColor: Color = self.parent.css.var("canvas_helperColor", Color)
+        self.textColor: Color = self.parent.css.var("canvas_textColor", Color)
+        self.helperAxis: int = self.parent.css.var("canvas_helperAxis", int)
+        self.axisFontSize: float = self.parent.css.var("canvas_axisFontSize", float)
+        self.axisFontFamily: str = self.parent.css.var("canvas_axisFontFamily")
+        self.numberFontSize: float = self.parent.css.var("canvas_numberFontSize", float)
+        self.numberFontFamily: str = self.parent.css.var("canvas_numberFontFamily")
 
         # Precomputing values
-        self.axisFont = QFont(self.axisFontFamily, self.axisFontSize)
-        self.axisMetrics = QFontMetrics(self.axisFont)
-        self.numberFont = QFont(self.numberFontFamily, self.numberFontSize)
-        self.numberMetrics = QFontMetrics(self.numberFont)
+        self.axisFont: QFont = QFont(self.axisFontFamily, self.axisFontSize)
+        self.axisMetrics: QFontMetrics = QFontMetrics(self.axisFont)
+        self.numberFont: QFont = QFont(self.numberFontFamily, self.numberFontSize)
+        self.numberMetrics: QFontMetrics = QFontMetrics(self.numberFont)
 
         self._generateScaleRange()
         self.updateScale()
@@ -62,11 +68,11 @@ class Canvas(QPixmap):
     # Util functions
 
     # Clears the canvas
-    def clear(self):
+    def clear(self) -> None:
         self.fill(Qt.transparent)
 
     # Renders the updated values
-    def update(self):
+    def update(self) -> None:
         self.clear()
 
         self.renderGrid()
@@ -81,13 +87,13 @@ class Canvas(QPixmap):
         self.refresh()
 
     # Repaints the canvas
-    def refresh(self):
+    def refresh(self) -> None:
         self.label.setPixmap(self)  # Dumb way, but whatever... Performance is sufficient
         # self.parent.update()
 
     # Generates scaling range array used for the axis scaling steps
-    def _generateScaleRange(self):
-        self.scaleRange = [1]
+    def _generateScaleRange(self) -> None:
+        self.scaleRange: List[float] = [1]
 
         # Converted from C-style for loop because Python doesn't know the for loop :D The best language ever...
 
@@ -104,14 +110,14 @@ class Canvas(QPixmap):
     # Rendering
 
     # Updates the scale values
-    def updateScale(self):
-        self.unit = self.scale * self.pixelRatio
+    def updateScale(self) -> None:
+        self.unit: float = self.scale * self.pixelRatio
 
-        self.axisStep = closest(self.scaleRange, 1 / self.scale)
-        self.unitStep = self.unit * self.axisStep
+        self.axisStep: float = closest(self.scaleRange, 1 / self.scale)
+        self.unitStep: float = self.unit * self.axisStep
 
     # Renders the points (numbers)
-    def renderPoints(self):
+    def renderPoints(self) -> None:
         painter = QPainter(self)
         painter.setFont(self.numberFont)
 
@@ -147,7 +153,7 @@ class Canvas(QPixmap):
             )
 
     # Renders the grid (this was the tricky part)
-    def renderGrid(self):
+    def renderGrid(self) -> None:
         # Prepare painter
         painter = QPainter(self)
         painter.setPen(self.gridColor)
@@ -240,7 +246,7 @@ class Canvas(QPixmap):
             self.axisColor
         )
 
-    def drawCircle(self, painter: QPainter, x: int, y: int, r: int, fill: QColor = None, stroke: QColor = None, strokeWidth: int = 1):
+    def drawCircle(self, painter: QPainter, x: float, y: float, r: int, fill: Optional[QColor] = None, stroke: Optional[QColor] = None, strokeWidth: int = 1) -> None:
         painter.setRenderHint(QPainter.Antialiasing, True)
         stroke and painter.setPen(QPen(stroke, strokeWidth, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         fill and painter.setBrush(fill)
@@ -250,14 +256,14 @@ class Canvas(QPixmap):
 
     # Events
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         self.prev[0] = event.x()
         self.prev[1] = event.y()
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         self.parent.setCursor(Qt.ArrowCursor)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         self.parent.setCursor(Qt.ClosedHandCursor)
 
         x = event.x()
@@ -274,7 +280,7 @@ class Canvas(QPixmap):
 
         self.update()
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, event: QWheelEvent) -> None:
         d = 1 if event.angleDelta().y() > 0 else -1
 
         self.scale += d * self.scale / self.scaleRate
