@@ -277,7 +277,9 @@ class Input(QLineEdit):
 
         expression = expression.strip()
 
-        if(not expression):
+        # A truly empty row is a valid blank state; a named row with no
+        # expression ("A=") is an incomplete input and must surface an error
+        if(not expression and name is None):
             item.ast = None
             item.parseError = None
 
