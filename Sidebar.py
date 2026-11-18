@@ -544,6 +544,11 @@ class Icon(QWidget):
         self.alert.setAttribute(Qt.WA_TransparentForMouseEvents, True)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
+        # The type menu is only offered on the "Add new" row; existing items
+        # keep their type once they hold a value
+        if(self.parent is not self.parent.parent.placeholder):
+            return
+
         self.parent.parent.showTypeMenu(self.parent, event.globalPos())
 
     def paintEvent(self, event: QPaintEvent) -> None:
