@@ -6,7 +6,7 @@ from ComplexNumber import ComplexNumber
 from ExpressionParser import ASTNode, InterpretError, Interpreter, ParseError, Parser, TokenizeError, Tokenizer, builtinContext, referencesOf
 from utils import clamp, hideDecimal
 from PyQt5.QtCore import QEvent, QObject, QPointF, Qt, QSize, QTimer
-from PyQt5.QtGui import QKeyEvent, QMouseEvent, QPaintEvent, QImage, QPainter, QPen, QPixmap
+from PyQt5.QtGui import QFont, QFontMetrics, QKeyEvent, QMouseEvent, QPaintEvent, QImage, QPainter, QPen, QPixmap
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QLayout, QLineEdit, QMenu, QScrollArea, QSizePolicy, QStyle, QStyleOption, QVBoxLayout, QWidget
 
 if TYPE_CHECKING:
@@ -625,15 +625,38 @@ class Item(QWidget):
         row1 = QHBoxLayout()
         row1.setSpacing(8)
         self.playPause: PlayPauseIcon = PlayPauseIcon(self)
-        self.nameLabel: QLabel = QLabel(self.name + " =", self.content)
+
+        labelStyle = (
+            f"font-family: {self.parent.parent.css.var('sidebar_fontFamily')}; font-size: 15px;"
+            f" color: {self.parent.parent.css.var('sidebar_color')};"
+        )
+
+        # The id is editable through a transparent field that looks like plain
+        # text (no border/background) but is actually a line edit
+        self.nameInput: QLineEdit = QLineEdit(self.name, self.content)
+        self.nameInput.setFrame(False)
+        self.nameInput.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        # Fixed to two characters wide so the slider keeps its room; a longer
+        # id simply overflows (hidden)
+        nameFont = QFont(self.parent.parent.css.var("sidebar_fontFamily"))
+        nameFont.setPixelSize(15)
+        self.nameInput.setFixedWidth(2 * QFontMetrics(nameFont).horizontalAdvance("0") + 6)
+        self.nameInput.setStyleSheet(
+            f"QLineEdit, QLineEdit:focus {{ border: none; background: transparent; {labelStyle} }}"
+        )
+        self.nameInput.editingFinished.connect(self._commitSliderName)
+
+        self.nameEquals: QLabel = QLabel("=", self.content)
+        self.nameEquals.setStyleSheet(labelStyle)
+
         self.slider: SliderWidget = SliderWidget(self)
         self.valueLabel: QLabel = QLabel(self.content)
         self.valueLabel.setMinimumWidth(34)
         self.valueLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.nameLabel.setStyleSheet(f"font-family: {self.parent.parent.css.var('sidebar_fontFamily')}; font-size: 15px; color: {self.parent.parent.css.var('sidebar_color')};")
-        self.valueLabel.setStyleSheet(self.nameLabel.styleSheet())
+        self.valueLabel.setStyleSheet(labelStyle)
         row1.addWidget(self.playPause)
-        row1.addWidget(self.nameLabel)
+        row1.addWidget(self.nameInput)
+        row1.addWidget(self.nameEquals)
         row1.addWidget(self.slider, 1)
         row1.addWidget(self.valueLabel)
         outer.addLayout(row1)
@@ -661,6 +684,21 @@ class Item(QWidget):
         self.animTimer.timeout.connect(self._animateTick)
 
         self._syncSliderLabel()
+
+    def _commitSliderName(self) -> None:
+        # Rename the slider's id: keep it a valid, unique identifier, otherwise
+        # revert to the last committed name
+        text = self.nameInput.text().strip()
+        valid = bool(re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", text))
+        conflict = any(other is not self and other.name == text for other in self.parent.items)
+
+        if(not valid or conflict):
+            self.nameInput.setText(self.name)
+            return
+
+        if(text != self.name):
+            self.name = text
+            self.parent.recompute()
 
     def _boundLabel(self, text: str) -> QLabel:
         c = self.parent.parent.css
