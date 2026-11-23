@@ -439,11 +439,11 @@ the methods call one another.
 
 <figure>
 <pre>
-expression := term (("+" | "-") term)*                    left-associative
+expression := term (("+" | "-") term)*
 term       := unary (("*" | "/") unary
-                    | ("(" | IDENT | NUMBER) unary)*      + implicit "×"
+            | ("(" | IDENT | NUMBER) unary)*   + implicit "×"
 unary      := ("+" | "-") unary | power
-power      := primary (("^" | "**") unary)?               right-associative
+power      := primary (("^" | "**") unary)?
 primary    := NUMBER | IDENT | IDENT "(" expression ("," expression)* ")"
             | "(" expression ")" | "|" expression "|"
 </pre>
