@@ -1,0 +1,382 @@
+digraph G {
+	
+	nodesep=0.25
+	ranksep=0.5
+	rankdir="TB"
+	splines="spline"
+
+	graph [
+		labelloc="t"
+		// fontname="Helvetica,Arial,sans-serif" [!] Cannot use multiple fonts, this will silently break the layout
+		fontname="Helvetica"
+	]
+	node [
+		fontname="Helvetica"
+		shape=record
+		// style=filled
+		// fillcolor=gray95
+	]
+	edge [
+		fontname="Helvetica"
+		labeldistance=3.0
+		minlen=2
+		arrowsize=1.4
+	]
+	TokenType [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="-5" >
+					<tr> <td> «enum» </td> </tr>
+					<tr> <td> <font face="Consolas"><b>TokenType</b></font> </td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">NUMBER</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">IDENT</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">PLUS</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">MINUS</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">STAR</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">DSTAR</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">SLASH</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">CARET</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">LPAR</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">RPAR</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">COMMA</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">PIPE</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">END</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	ASTOperator [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="-5" >
+					<tr> <td> «enum» </td> </tr>
+					<tr> <td> <font face="Consolas"><b>ASTOperator</b></font> </td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">ADD</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">SUB</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">MULT</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">DIV</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">POW</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">POS</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">NEG</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	Token [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">Token</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ type: TokenType</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ text: str</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ position: int</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ end: int</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ source: str</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ preview: str</font></td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ describe(): str</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	Tokenizer [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">Tokenizer</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ source: str</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">- _tokens: List[Token]</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">- _index: int</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">- _cursor: int</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">- _exhausted: bool</font></td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ peekToken(offset: int): Token</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ nextToken(): Token</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ isAtEnd(): bool</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ save(): state</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ restore(state: state): None</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">- _tokenizeNext(): Token</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	ASTNode [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="-5" >
+					<tr> <td> «abstract» </td> </tr>
+					<tr> <td> <font face="Consolas"><b>ASTNode</b></font> </td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ token: Token</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ position: int</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	ExpressionASTNode [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="-5" >
+					<tr> <td> «abstract» </td> </tr>
+					<tr> <td> <font face="Consolas"><b>ExpressionASTNode</b></font> </td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="center" > <font color="gray" size="10"><i>No fields</i></font> </td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	LiteralASTNode [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">LiteralASTNode</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ value: float</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	IdentifierASTNode [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">IdentifierASTNode</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ name: str</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	BinaryExpressionASTNode [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">BinaryExpressionASTNode</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ operator: ASTOperator</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ left: ASTNode</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ right: ASTNode</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	UnaryExpressionASTNode [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">UnaryExpressionASTNode</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ operator: ASTOperator</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ operand: ASTNode</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	CallExpressionASTNode [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">CallExpressionASTNode</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ name: str</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ arguments: List[ExpressionASTNode]</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	Parser [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">Parser</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ t: Tokenizer</font></td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ parse(): ASTNode</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ parseExpression(): ExpressionASTNode</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ parseTerm(): ExpressionASTNode</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ parseUnary(): ExpressionASTNode</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ parsePower(): ExpressionASTNode</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ parsePrimary(): ExpressionASTNode</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ parseCall(ident: Token): CallExpressionASTNode</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ parseAbs(lpipe: Token): CallExpressionASTNode</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ parseParen(): ExpressionASTNode</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	Interpreter [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">Interpreter</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ context: Dict[str, List[ComplexNumber]]</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ maxValues: int</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ functions: Dict[str, ComplexFunction]</font></td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ interpret(node: ASTNode): List[ComplexNumber]</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">- _eval(node: ASTNode): List[ComplexNumber]</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">- _evalCall(node: CallExpressionASTNode): List[ComplexNumber]</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">- _safe(fn: Callable, node: ASTNode): ComplexNumber</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	ComplexFunction [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">ComplexFunction</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ name: str</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ arity: int | (int, int)</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ fn: Callable[[List[ComplexNumber], int], ComplexNumber]</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ multi: bool</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ period: int?</font></td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ arityError(count: int): str?</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	ComplexNumber [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">ComplexNumber</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ r: float</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ i: float</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ sign: str</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ distance: float</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ angle: float</font></td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ add(x: ComplexNumber): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ sub(x: ComplexNumber): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ mult(x: ComplexNumber): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ div(x: ComplexNumber): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ neg(): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ conj(): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ sqrt(): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ abs(): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ arg(): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ real(): ComplexNumber</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ imag(): ComplexNumber</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	ExpressionError [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">ExpressionError</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ message: str</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ position: int?</font></td> </tr>
+					<tr> <td align="left" ><font face="Consolas">+ source: str?</font></td> </tr>
+				</table>
+			</td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="left" ><font face="Consolas">+ __str__(): str</font></td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	TokenizeError [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">TokenizeError</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="center" > <font color="gray" size="10"><i>No fields</i></font> </td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	ParseError [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">ParseError</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="center" > <font color="gray" size="10"><i>No fields</i></font> </td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	InterpretError [
+		shape=plain
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b><font face="Consolas">InterpretError</font></b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0" >
+					<tr> <td align="center" > <font color="gray" size="10"><i>No fields</i></font> </td> </tr>
+				</table>
+			</td> </tr>
+				</table>>
+	]
+	Token -> TokenType [label="type"]
+	Tokenizer -> Token [label="tokens"]
+	Tokenizer -> TokenizeError [arrowhead=vee style=dotted]
+	ASTNode -> Token [label="token"]
+	ASTNode -> ExpressionASTNode [label="" dir=back arrowtail=empty style=solid]
+	ASTNode -> LiteralASTNode [label="" dir=back arrowtail=empty style=solid]
+	ASTNode -> IdentifierASTNode [label="" dir=back arrowtail=empty style=solid]
+	ExpressionASTNode -> BinaryExpressionASTNode [label="" dir=back arrowtail=empty style=solid]
+	BinaryExpressionASTNode -> ASTOperator [label="operator"]
+	ExpressionASTNode -> UnaryExpressionASTNode [label="" dir=back arrowtail=empty style=solid]
+	UnaryExpressionASTNode -> ASTOperator [label="operator"]
+	ExpressionASTNode -> CallExpressionASTNode [label="" dir=back arrowtail=empty style=solid]
+	Parser -> Tokenizer [label="tokenizer"]
+	Parser -> ASTNode [style="dashed" label="builds"]
+	Parser -> ParseError [arrowhead=vee style=dotted]
+	Interpreter -> ASTNode [style="dashed" label="evaluates"]
+	Interpreter -> ComplexNumber [label="values"]
+	Interpreter -> ComplexFunction [label="functions"]
+	Interpreter -> InterpretError [arrowhead=vee style=dotted]
+	ComplexFunction -> ComplexNumber [label="fn"]
+	ExpressionError -> TokenizeError [label="" dir=back arrowtail=empty style=solid]
+	ExpressionError -> ParseError [label="" dir=back arrowtail=empty style=solid]
+	ExpressionError -> InterpretError [label="" dir=back arrowtail=empty style=solid]
+}

@@ -224,7 +224,7 @@ figure > pre {
 * **Topic:** Complex-number expression evaluator and plotter.
 * **Authors:** Bc. Jaroslav Louma *&lt;xlouma00@stud.fit.vutbr.cz&gt;*
 * **Date:** 2021-06-25, 2026-11-17
-* **Version:** 2.0
+* **Version:** 2.1
 
 A small PyQt5 desktop app for evaluating **complex-number expressions** and
 plotting the results on the complex plane. Each row in the left sidebar is an
@@ -375,6 +375,167 @@ List of operations defined as built-in functions + their argument count and desc
   value is printed next to each point.
 - Multiple values of a single expression are connected by a dashed line.
 - **Zoom** with the mouse wheel, **pan** by dragging.
+
+## Implementation
+
+The application is split into a thin GUI layer and a self-contained expression
+engine. The GUI (`Calculator`, `Sidebar`, `Canvas`) only collects the rows, lets
+the user edit them and draws the result; all computation happens in the engine
+(`ExpressionParser`, `ComplexNumber`), which is pure, headless Python with no
+knowledge of PyQt. This separation is what lets `tests/parser.py` exercise the
+entire engine without opening a window.
+
+When a row changes, the sidebar re-evaluates **all** rows and hands their values
+to the canvas. Each row goes through a three-stage pipeline:
+
+1. **Tokenization** — the text becomes a flat stream of tokens.
+2. **Parsing** — the tokens are folded into an abstract syntax tree (AST).
+3. **Interpretation** — the AST is walked and reduced to one or more
+   `ComplexNumber`s.
+
+Because rows can reference each other, they are not evaluated in list order.
+The sidebar first builds a **dependency graph** (an edge from a row to every
+defined name it references) and orders it with **Kahn's algorithm** — a
+breadth-first topological sort driven by in-degrees. Any row left with a
+non-zero in-degree belongs to a cycle, which a depth-first search then recovers
+so it can be reported (`a → b → a`). A definition is therefore always available
+before it is used, and a row whose dependency is invalid is itself marked
+invalid, which is why errors cascade down the chain.
+
+### The expression pipeline
+
+#### Tokenization
+
+The `Tokenizer` turns a string into a list of `Token`s. Each token records its
+type (a `TokenType`), its raw text, its position and a short preview of the
+surrounding source — the last two are used to render precise error messages.
+Tokens are produced **lazily**: an internal buffer is filled on demand as the
+parser asks for the next token, so a short or invalid expression is only
+partially scanned. `_tokenizeNext` skips whitespace and recognizes numbers
+(optional exponent, checked for finiteness), identifiers, the two-character
+`**` operator and the single-character operators; anything else raises a
+`TokenizeError`.
+
+The parser only ever needs to look one (or two) tokens ahead, so the tokenizer
+exposes `peekToken`/`nextToken`. It can also save and restore its whole state
+(`save`/`restore`), which the parser relies on for backtracking below.
+
+#### Parsing (recursive descent)
+
+The `Parser` is a classic **recursive-descent** parser: each non-terminal of the
+grammar is a method, and operator precedence and associativity are encoded in how
+the methods call one another.
+
+<figure>
+<pre>
+expression := term (("+" | "-") term)*                    left-associative
+term       := unary (("*" | "/") unary
+                    | ("(" | IDENT | NUMBER) unary)*      + implicit "×"
+unary      := ("+" | "-") unary | power
+power      := primary (("^" | "**") unary)?               right-associative
+primary    := NUMBER | IDENT | IDENT "(" expression ("," expression)* ")"
+            | "(" expression ")" | "|" expression "|"
+</pre>
+<figcaption>
+
+Grammar of the expression language. The parse methods map one-to-one onto the
+non-terminals (e.g. `parseTerm` ↔ `term`).
+
+</figcaption>
+</figure>
+
+A few of these choices are worth calling out:
+
+- **Precedence** falls out of the call chain `expression → term → unary → power
+  → primary`: since each level calls the one below it, `*`/`/` bind tighter than
+  `+`/`-`, and `^` tighter still.
+- **Left-associativity** of `+ - * /` comes from the `while` loop in those
+  methods, which keeps consuming operators and left-folds them (`a-b-c` →
+  `(a-b)-c`).
+- **Right-associativity** of `^` comes from `parsePower` calling `parseUnary`
+  (not `parsePower`) for its exponent and *not* looping, so `2^3^2` →
+  `2^(3^2)`. This is also why the exponent has unary precedence: `-2^2` is
+  `-(2^2)`, not `(-2)^2`.
+- **Implicit multiplication** (`2i`, `2(1+i)`, `3x`) is recognized in
+  `parseTerm`: when the next token starts an operand (a number, an identifier or
+  `(`) with no explicit operator, a `MULT` node is inserted.
+- **`|x|`** desugars to `abs(x)`: `parsePrimary` rewrites `| expr |` into a call
+  to `abs`.
+- **Disambiguation by backtracking.** In `parseTerm`, a `|` may start a magnitude
+  or merely begin the next term; in `parsePrimary`, an identifier may be a bare
+  name or a function call. In both cases the parser saves the tokenizer state,
+  tries the richer form, and if that fails with a `ParseError` restores the
+  state and falls back — keeping the grammar unambiguous without lookahead.
+
+Every AST node keeps the `Token` that produced it, so a `ParseError` can point
+at the exact offending position.
+
+#### Interpretation
+
+The `Interpreter` evaluates an AST to a **list** of `ComplexNumber`s rather than
+a single value, which is what makes multi-valued expressions natural. `_eval` is
+a recursive walk dispatching on node type: a literal yields one value; an
+identifier is looked up in the context and thus inherits its row's whole list; a
+binary operator combines its operands over the **Cartesian product** of their
+value lists (a nested loop of $m \cdot n$ pairs); and a function call combines
+its argument lists with `itertools.product`. Every result is capped at
+`@maxValues` (8 by default), so repeatedly multiplying multi-valued terms cannot
+explode.
+
+Multi-valued functions additionally iterate a **branch index** $k$ over the
+sequence $0, 1, -1, 2, -2, \dots$, asking the function for the $k$-th branch and
+stopping once a value repeats (within a small tolerance) or the cap is reached.
+`pow` is special-cased: an integer exponent is an ordinary (single-valued)
+power, whereas a non-integer exponent is computed as $a^{b} = e^{\,b\log a}$
+with the multi-valued logarithm — which is what yields the $n$ distinct $n$-th
+roots. Finally, `interpret` strips numerically duplicate values before
+returning, so e.g. `sqrt(1)` collapses to a single point.
+
+### The abstract syntax tree
+
+The AST is the data structure shared by the parser (producer) and the
+interpreter (consumer). `ASTNode` is the common base and stores the producing
+`Token` (hence the source position); `ExpressionASTNode` is an empty marker for
+nodes that denote an expression. The concrete node types are:
+
+- `LiteralASTNode` — a numeric constant (`value`);
+- `IdentifierASTNode` — a name (`name`);
+- `BinaryExpressionASTNode` — an infix operator (`operator`, `left`, `right`);
+- `UnaryExpressionASTNode` — a sign (`operator`, `operand`);
+- `CallExpressionASTNode` — a call (`name`, `arguments`), which is also how
+  `|x|` is stored (a call to `abs`).
+
+For the expression `2 + 3i` the pipeline produces the tree below: `3i` becomes
+an implicit multiplication, and `+` sits at the root because it is the
+lowest-precedence operator.
+
+<figure>
+<pre>
++  BinaryExpressionASTNode(ADD)
+├── 2  LiteralASTNode
+└── *  BinaryExpressionASTNode(MULT)
+    ├── 3  LiteralASTNode
+    └── i  IdentifierASTNode
+</pre>
+<figcaption>
+
+The AST for the expression `2 + 3i`.
+
+</figcaption>
+</figure>
+
+### Class diagram
+
+<figure>
+<img src="img/class_diagram.svg" alt="Class diagram of the expression pipeline">
+<figcaption>
+
+Class diagram of the expression pipeline: the tokenizer, the recursive-descent
+parser, the AST node hierarchy and the interpreter, plus the value and function
+types they operate on.
+
+</figcaption>
+</figure>
 
 ## Project layout
 
