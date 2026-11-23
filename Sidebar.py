@@ -20,6 +20,7 @@ class Sidebar(QWidget):
 
         self.items: List["Item"] = []
         self.activeItem: Optional["Item"] = None
+        self._lastSig: Optional[Tuple] = None
         self.color: int = random.randint(0, 255)
         self.colorStep: int = self.parent.css.var("sidebar_colorStep", int)
         self.colorOffset: int = self.parent.css.var("sidebar_colorOffset", int)
@@ -147,7 +148,7 @@ class Sidebar(QWidget):
         else:
             item.setType("slider")
 
-    def recompute(self) -> None:
+    def recompute(self, changed: Optional["Item"] = None) -> None:
         items = self.items
 
         nameToItem: Dict[str, "Item"] = {}
@@ -155,13 +156,27 @@ class Sidebar(QWidget):
             if(item.name and item.name not in nameToItem):
                 nameToItem[item.name] = item
 
+        # Names each item references. This doubles as the structural signature:
+        # a row's identity is its name plus the names it depends on. While that
+        # signature is unchanged, only `changed` and its transitive dependents
+        # can hold a new value, so we re-evaluate just that subgraph. A
+        # structural change (a row added/removed/renamed, or its references
+        # rewired) forces a full pass.
+        refNames: Dict["Item", frozenset] = {}
+        for item in items:
+            refNames[item] = frozenset(referencesOf(item.ast)) if(item.ast is not None) else frozenset()
+
+        signature = tuple((item.name, refNames[item]) for item in items)
+        structural = signature != self._lastSig
+        self._lastSig = signature
+
         dependencies: Dict["Item", Set["Item"]] = {}
         dependents: Dict["Item", List["Item"]] = {item: [] for item in items}
 
         for item in items:
             deps: Set["Item"] = set()
 
-            for name in referencesOf(item.ast) if(item.ast is not None) else []:
+            for name in refNames[item]:
                 target = nameToItem.get(name)
 
                 if(target is not None):
@@ -189,7 +204,25 @@ class Sidebar(QWidget):
         unresolved = [item for item in items if indegree[item] > 0]
         unresolvedSet = set(unresolved)
 
-        for item in items:
+        # The set of rows whose value may have changed: `changed` and everything
+        # downstream of it. A structural change (or an unknown origin) invalidates
+        # the whole graph, so re-evaluate all of it.
+        if(structural or changed is None or changed not in items):
+            affected = set(items)
+        else:
+            affected = {changed}
+            stack = [changed]
+
+            while(stack):
+                cur = stack.pop()
+
+                for dependent in dependents[cur]:
+                    if(dependent not in affected):
+                        affected.add(dependent)
+                        stack.append(dependent)
+
+        # Rows outside the affected set keep their cached values and errors.
+        for item in affected:
             item.values = []
             item.evalError = None
 
@@ -202,9 +235,11 @@ class Sidebar(QWidget):
             context[name] = []
 
         for item in order:
-            if(item.type == "slider"):
+            # Unaffected rows are not re-evaluated; they still publish their
+            # cached value so any (affected) dependent reads it from the context.
+            if(item in affected and item.type == "slider"):
                 item.values = [ComplexNumber([item.slider.value, 0.0])]
-            elif(item.ast is not None):
+            elif(item in affected and item.ast is not None):
                 try:
                     item.values = Interpreter(context, self.maxValues).interpret(item.ast)
                 except InterpretError as err:
@@ -311,7 +346,7 @@ class Input(QLineEdit):
             item.ast = None
             item.parseError = None
 
-            sidebar.recompute()
+            sidebar.recompute(item)
             return
 
         try:
@@ -322,7 +357,7 @@ class Input(QLineEdit):
             item.ast = None
             item.parseError = str(err)
 
-        sidebar.recompute()
+        sidebar.recompute(item)
 
     def processExpression(self) -> None:
         item = self.parent
@@ -339,7 +374,7 @@ class Input(QLineEdit):
                 if(sidebar.activeItem is item):
                     sidebar.activeItem = None
 
-                sidebar.recompute()
+                sidebar.recompute(item)
                 sidebar.refreshScrollHeight()
             else:
                 item.showIcon(item.icon.plus)
@@ -698,7 +733,7 @@ class Item(QWidget):
 
         if(text != self.name):
             self.name = text
-            self.parent.recompute()
+            self.parent.recompute(self)
 
     def _boundLabel(self, text: str) -> QLabel:
         c = self.parent.parent.css
@@ -756,7 +791,7 @@ class Item(QWidget):
         self.icon.setFixedSize(self.parent.parent.itemHeight, self.rowHeight)
         self._buildContent()
         self.parent.refreshScrollHeight()
-        self.parent.recompute()
+        self.parent.recompute(self)
 
         # Converting the "add new" row into a slider leaves a fresh row behind
         if(t == "slider" and self is self.parent.placeholder):
@@ -775,7 +810,7 @@ class Item(QWidget):
             return
 
         self._syncSliderLabel()
-        self.parent.recompute()
+        self.parent.recompute(self)
 
     def _stopAnimation(self) -> None:
         if(getattr(self, "animTimer", None) is not None):

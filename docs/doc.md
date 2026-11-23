@@ -385,8 +385,9 @@ the user edit them and draws the result; all computation happens in the engine
 knowledge of PyQt. This separation is what lets `tests/parser.py` exercise the
 entire engine without opening a window.
 
-When a row changes, the sidebar re-evaluates **all** rows and hands their values
-to the canvas. Each row goes through a three-stage pipeline:
+When a row changes, the sidebar re-evaluates just that row and every row that
+depends on it, and hands their values to the canvas. Each re-evaluated row goes
+through a three-stage pipeline:
 
 1. **Tokenization** — the text becomes a flat stream of tokens.
 2. **Parsing** — the tokens are folded into an abstract syntax tree (AST).
@@ -401,6 +402,16 @@ non-zero in-degree belongs to a cycle, which a depth-first search then recovers
 so it can be reported (`a → b → a`). A definition is therefore always available
 before it is used, and a row whose dependency is invalid is itself marked
 invalid, which is why errors cascade down the chain.
+
+Re-evaluation is **incremental**: only the edited row and its transitive
+dependents are re-run, while every other row simply keeps its cached value. This
+is possible because the (cheap) reference graph is rebuilt on each pass and
+compared, by row name and by the names it references, against the previous one.
+As long as that signature is unchanged, the rows whose value can differ are
+exactly the edited row plus everything downstream of it. When the signature does
+change — a row added, removed or renamed, or a row's references rewired — the
+whole graph is re-evaluated instead. That single comparison keeps the incremental
+path free of any invalidation bookkeeping, so it stays trivially correct.
 
 ### The expression pipeline
 

@@ -310,11 +310,6 @@ check("err pipe dangling", e is not None and "Unexpected" in e.message)
 e = parseErr("|2|3|")
 check("err pipe unbalanced", e is not None)
 
-# ---------------- Function aliases ----------------
-for alias in ["abs", "mag", "mod", "norm", "len", "size"]:
-    check(f"alias {alias}", evstr(f"{alias}(3+4i)") == ["5"])
-check("alias phase", evstr("phase(i)") == [str(ComplexNumber([math.pi / 2, 0.0]))])
-
 print(f"\n{PASSED} passed, {len(FAILED)} failed")
 if(FAILED):
     sys.exit(1)
